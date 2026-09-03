@@ -1,0 +1,123 @@
+name: Build macOS release
+
+# SECURITY: Keep this workflow manual-only. It can mint a short-lived token
+# that reads the private builder repository. Do not add push, pull_request, or
+# pull_request_target triggers, and protect the default branch from unreviewed
+# workflow changes.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing GitHub release tag created by the Windows release
+        required: true
+        type: string
+      builder_ref:
+        description: Reviewed branch, tag, or commit in lotra-build-private
+        required: true
+        type: string
+
+concurrency:
+  group: lotra-macos-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    environment: macos-release
+    env:
+      RELEASE_REPO: lotra-dev/lotra
+      BUILDER_REPO: lotra-dev/lotra-build-private
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      BUILDER_REF: ${{ inputs.builder_ref }}
+      NUITKA_CACHE_DIR: ${{ github.workspace }}/builder/.nuitka-cache
+    steps:
+      # This GitHub App must be installed only on lotra-build-private with
+      # read-only Contents permission. The action revokes its token at cleanup.
+      - name: Mint short-lived private-builder token
+        id: builder-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.LOTRA_BUILDER_APP_ID }}
+          private-key: ${{ secrets.LOTRA_BUILDER_APP_PRIVATE_KEY }}
+          owner: lotra-dev
+          repositories: lotra-build-private
+          permission-contents: read
+
+      - name: Check out reviewed private builder revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.BUILDER_REPO }}
+          ref: ${{ inputs.builder_ref }}
+          token: ${{ steps.builder-token.outputs.token }}
+          path: builder
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.8.3"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Validate release and builder identity
+        working-directory: builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^lotra-v[1-9][0-9]*\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "Invalid release tag: $RELEASE_TAG" >&2
+            exit 2
+          fi
+          if [[ ! "$BUILDER_REF" =~ ^[A-Za-z0-9._/@-]+$ ]]; then
+            echo "Invalid builder ref format" >&2
+            exit 2
+          fi
+          expected_version="${RELEASE_TAG#lotra-v}"
+          project_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          runtime_release="$(python -c 'from localrsa import CLIENT_RELEASE; print(CLIENT_RELEASE)')"
+          if [[ "$project_version" != "$expected_version" || "$runtime_release" != "$RELEASE_TAG" ]]; then
+            echo "Builder version mismatch: project=$project_version runtime=$runtime_release release=$RELEASE_TAG" >&2
+            exit 2
+          fi
+
+      - name: Restore Nuitka build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: builder/.nuitka-cache
+          key: nuitka-macos-15-${{ hashFiles('builder/uv.lock') }}-${{ github.run_id }}
+          restore-keys: |
+            nuitka-macos-15-${{ hashFiles('builder/uv.lock') }}-
+            nuitka-macos-15-
+
+      - name: Build unsigned Apple Silicon app with Nuitka
+        working-directory: builder
+        env:
+          LOTRA_MACOS_ASSET_NAME: Lotra-macOS-Apple-Silicon
+          LOTRA_MACOS_SIGNING_MODE: unsigned
+        shell: bash
+        run: bash scripts/build_release_macos.sh
+
+      - name: Confirm release exists before upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO" >/dev/null
+
+      - name: Upload only the final Mac archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="builder/release-macos/Lotra-macOS-Apple-Silicon.zip"
+          test -f "$archive"
+          gh release upload "$RELEASE_TAG" "$archive" --repo "$RELEASE_REPO"

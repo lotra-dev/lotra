@@ -25,7 +25,7 @@ PATCH_NOTES_CONTENT = "**Lotra v1.21.17 — bug fixes only.**\n\nSoFi security r
 # SHA-256 of the v1.21.14 Windows release asset (the in-app updater's trust anchor).
 # SHA-256 of the matching v1.21.14 Apple Silicon release asset.
 WINDOWS_SHA256 = "50c2b370824370c626ab250ef4b80074df620a823fc78a3d0dc9d284e1a17e4b"
-MACOS_SHA256 = "64c280b10e7d4c9787ad500ed8e63429ddff0fd6ec19fe346e9e9da7e24bf3bf"
+MACOS_SHA256 = "8dcbbc87bb835a30c7b315dddf72ec16680d90cef9f254ae693ff3fd8010d96d"
 OAUTH_REQUEST_TTL_SECONDS = "600"
 SESSION_TTL_SECONDS = "604800"
 PREMIUM_RECHECK_SECONDS = "300"

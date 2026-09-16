@@ -1,0 +1,51 @@
+name = "lotra-api"
+main = "src/index.ts"
+compatibility_date = "2026-07-18"
+workers_dev = true
+
+[vars]
+DISCORD_APPLICATION_ID = "1528176977171841115"
+DISCORD_PUBLIC_KEY = "a10219e40bfcdc98c31932c31958110775d0fa08d465588f043751739ea8bf04"
+DISCORD_GUILD_ID = "1365891387681280012"
+DISCORD_PREMIUM_ROLE_ID = "1366153695376441475"
+DISCORD_ADMIN_CHANNEL_ID = "1528196129664008303"
+DISCORD_SIGNAL_CHANNEL_ID = "1366151096896323718"
+DISCORD_SELL_CHANNEL_ID = "1533892771113472010"
+DISCORD_PATCH_NOTES_CHANNEL_ID = "1366151053212385455"
+DISCORD_PROFIT_CHANNEL_ID = "1532785187245654186"
+DISCORD_ADMIN_USER_ID = "604662850988015626"
+DISCORD_ADMIN_ROLE_ID = "1366153501939335339"
+WORKER_ORIGIN = "https://lotra-api.lotra.workers.dev"
+LOTRA_WEBSITE_URL = "https://lotra.pages.dev/"
+LEGAL_VERSION = "2026-09-03"
+DESKTOP_VERSION = "lotra-v1.21.17"
+DESKTOP_DOWNLOAD_URL = "https://github.com/lotra-dev/lotra/releases/latest"
+PATCH_NOTES_VERSION = "lotra-v1.21.17"
+PATCH_NOTES_CONTENT = "**Lotra v1.21.17 — bug fixes only.**\n\nSoFi security rejections are logged and skipped per ticker so other brokers continue processing. Queued orders no longer hold the batch behind a rejected SoFi security."
+# SHA-256 of the v1.21.14 Windows release asset (the in-app updater's trust anchor).
+# SHA-256 of the matching v1.21.14 Apple Silicon release asset.
+WINDOWS_SHA256 = "c953fa17e671fb5f6d84209834e6160c8c2bd115afb625c3addbe3455981ac57"
+MACOS_SHA256 = "64c280b10e7d4c9787ad500ed8e63429ddff0fd6ec19fe346e9e9da7e24bf3bf"
+OAUTH_REQUEST_TTL_SECONDS = "600"
+SESSION_TTL_SECONDS = "604800"
+PREMIUM_RECHECK_SECONDS = "300"
+SIGNAL_LEASE_SECONDS = "300"
+PREVIEW_TTL_SECONDS = "120"
+MAX_SHARES_PER_SIGNAL = "10"
+
+[[durable_objects.bindings]]
+name = "SIGNAL_HUB"
+class_name = "SignalHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SignalHub"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lotra"
+database_id = "38e1ea18-c794-4a1c-9011-f8143f7e6af7"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["*/15 * * * *"]

@@ -1,0 +1,83 @@
+[project]
+name = "localrsa"
+version = "1.21.17"
+description = "Lotra desktop portfolio and assisted-order tool."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "beautifulsoup4==4.12.3",
+    "certifi==2026.6.17",
+    "cryptography==50.0.0",
+    "httpx==0.28.1",
+    "keyring==25.6.0",
+    "nodriver==0.50.3",
+    "platformdirs==4.3.6",
+    "pydantic==2.12.5",
+    "PySide6==6.8.1.1",
+    "robin-stocks==3.4.0",
+    "tzdata==2025.2",
+    "websockets==16.1",
+    "zendriver==0.15.4",
+]
+
+[project.optional-dependencies]
+broker-public = [
+    "public-invest-api==1.3.5",
+]
+broker-fennel = []
+# Kept as a compatibility extra for existing install commands. Robinhood is a
+# built-in broker, so its runtime package is installed with Lotra itself.
+broker-robinhood = []
+broker-chase = []
+broker-sofi = []
+broker-wellstrade = []
+dev = [
+    "bandit==1.8.0",
+    "mypy==1.14.1",
+    "nuitka==4.2",
+    "pip-audit==2.7.3",
+    "pyinstaller==6.21.0",
+    "pytest==9.0.3",
+    "pytest-qt==4.4.0",
+    "ruff==0.8.4",
+]
+
+[project.scripts]
+lotra = "localrsa.app:main"
+localrsa = "localrsa.app:main"
+
+[build-system]
+requires = ["hatchling==1.26.3"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["localrsa"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["localrsa", "tests"]
+exclude = [".audit", ".venv"]
+
+[tool.ruff.lint]
+select = ["A", "B", "C4", "E", "F", "I", "N", "PT", "RET", "S", "SIM", "UP", "W"]
+ignore = [
+    "S101",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["localrsa"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "slow: deselect with '-m \"not slow\"' (opt-in Nuitka build tests)",
+]
+
+[dependency-groups]
+dev = [
+    "pyarmor>=9.2.7",
+]

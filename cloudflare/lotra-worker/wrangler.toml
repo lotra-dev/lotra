@@ -24,7 +24,7 @@ PATCH_NOTES_VERSION = "lotra-v1.21.17"
 PATCH_NOTES_CONTENT = "**Lotra v1.21.17 — bug fixes only.**\n\nSoFi security rejections are logged and skipped per ticker so other brokers continue processing. Queued orders no longer hold the batch behind a rejected SoFi security."
 # SHA-256 of the v1.21.14 Windows release asset (the in-app updater's trust anchor).
 # SHA-256 of the matching v1.21.14 Apple Silicon release asset.
-WINDOWS_SHA256 = "c953fa17e671fb5f6d84209834e6160c8c2bd115afb625c3addbe3455981ac57"
+WINDOWS_SHA256 = "50c2b370824370c626ab250ef4b80074df620a823fc78a3d0dc9d284e1a17e4b"
 MACOS_SHA256 = "64c280b10e7d4c9787ad500ed8e63429ddff0fd6ec19fe346e9e9da7e24bf3bf"
 OAUTH_REQUEST_TTL_SECONDS = "600"
 SESSION_TTL_SECONDS = "604800"

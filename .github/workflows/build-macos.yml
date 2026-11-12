@@ -1,0 +1,91 @@
+name: macOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag
+        required: true
+        type: string
+      builder_ref:
+        description: Source revision
+        required: true
+        type: string
+
+concurrency:
+  group: lotra-macos-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    environment: macos-release
+    env:
+      RELEASE_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      BUILDER_REF: ${{ inputs.builder_ref }}
+    steps:
+      - name: Prepare
+        env:
+          BUILDER_REPO: ${{ secrets.LOTRA_BUILDER_REPO }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^lotra-v[1-9][0-9]*\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "Invalid release_tag" >&2
+            exit 2
+          fi
+          if [[ ! "$BUILDER_REF" =~ ^[A-Za-z0-9._/@-]+$ || "$BUILDER_REF" == -* || "$BUILDER_REF" == *".."* ]]; then
+            echo "Invalid builder_ref" >&2
+            exit 2
+          fi
+          if [[ -z "$BUILDER_REPO" || "$BUILDER_REPO" != */* ]]; then
+            echo "Missing configuration" >&2
+            exit 2
+          fi
+          echo "::add-mask::${BUILDER_REPO#*/}"
+
+      - name: Authorize
+        id: auth
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.LOTRA_BUILDER_APP_ID }}
+          private-key: ${{ secrets.LOTRA_BUILDER_APP_PRIVATE_KEY }}
+          repositories: ${{ secrets.LOTRA_BUILDER_REPO }}
+          permission-contents: read
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ secrets.LOTRA_BUILDER_REPO }}
+          ref: ${{ inputs.builder_ref }}
+          token: ${{ steps.auth.outputs.token }}
+          path: src
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: .cache/macos
+          key: macos-15-cache-${{ github.run_id }}
+          restore-keys: |
+            macos-15-cache-
+
+      - name: Build
+        env:
+          CACHE_ROOT: ${{ github.workspace }}/.cache/macos
+          OUTPUT_ARCHIVE: ${{ github.workspace }}/dist/Lotra-macOS-Apple-Silicon.zip
+        shell: bash
+        run: bash src/scripts/ci_macos_release.sh build
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE_PATH: ${{ github.workspace }}/dist/Lotra-macOS-Apple-Silicon.zip
+        shell: bash
+        run: bash src/scripts/ci_macos_release.sh publish
